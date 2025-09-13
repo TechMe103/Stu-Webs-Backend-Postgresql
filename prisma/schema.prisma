@@ -1,0 +1,71 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ---------------- SIGNUP / AUTH INFO ----------------
+model Student {
+  id         Int    @id @default(autoincrement())
+  firstName  String
+  middleName String
+  lastName   String
+  stuID      String @unique
+  PRN        String @unique
+  email      String @unique
+  password   String
+  photoURL   String
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  personalDetails PersonalDetails?
+  Admissions      Admission[]
+}
+
+// ---------------- PERSONAL DETAILS ----------------
+model PersonalDetails {
+  id             Int      @id @default(autoincrement())
+  student        Student  @relation(fields: [studentId], references: [id])
+  studentId      Int      @unique
+
+  branch         String?
+  dob            DateTime?
+  bloodGroup     String?
+
+  currentStreet  String?
+  currentCity    String
+  currentPincode String?
+
+  nativeStreet   String?
+  nativeCity     String
+  nativePincode  String?
+
+  category       String?
+  mobileNo       String
+  parentMobileNo String
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// ---------------- ADMISSION ----------------
+model Admission {
+  id                   Int      @id @default(autoincrement())
+  student              Student  @relation(fields: [studentId], references: [id])
+  studentId            Int
+  rollno               String?
+  year                 String?
+  div                  String?
+  course               String
+  admissionDate        DateTime @default(now())
+  status               String   @default("pending")
+  fees                 Float
+  isFeesPaid           Boolean  @default(false)
+  isScholarshipApplied Boolean  @default(false)
+  academicYear         String
+}
