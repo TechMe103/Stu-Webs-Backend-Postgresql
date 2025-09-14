@@ -12,7 +12,7 @@ const cookieOptions = {
 // ---------------- SIGNUP ----------------
 exports.signup = async (req, res) => {
   try {
-    const { firstName, middleName, lastName, stuID, PRN, email, password, photoURL } = req.body;
+    const { firstName, middleName, lastName, stuID, PRN, email, password } = req.body;
 
     // Check if Student exists
     const existing = await prisma.student.findUnique({ where: { stuID } });
@@ -23,17 +23,17 @@ exports.signup = async (req, res) => {
 
     // Create Student
     const student = await prisma.student.create({
-      data: { firstName, middleName, lastName, stuID, PRN, email, password: hashedPassword, photoURL }
+      data: { firstName, middleName, lastName, stuID, PRN, email, password: hashedPassword }
     });
 
     // Create JWT
-    const token = jwt.sign({ id: student.id, stuID: student.stuID }, JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign({ id: student.id, stuID: student.stuID,  role : student.role }, JWT_SECRET, { expiresIn: '1d' });
 
     // Send JWT only in cookie
     res.cookie('token', token, cookieOptions);
 
     // Send response without token
-    return res.status(201).json({ message: 'Signup successful', student });
+    return res.status(201).json({ message: 'Signup successful' });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -51,15 +51,40 @@ exports.login = async (req, res) => {
     const match = await bcrypt.compare(password, student.password);
     if (!match) return res.status(400).json({ error: 'Invalid credentials' });
 
-    const token = jwt.sign({ id: student.id, stuID: student.stuID }, JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign({ id: student.id, stuID: student.stuID, role : student.role }, JWT_SECRET, { expiresIn: '1d' });
 
     // Send JWT only in cookie
     res.cookie('token', token, cookieOptions);
 
     // Send response without token
-    return res.status(200).json({ message: 'Login successful', student });
+    return res.status(200).json({ message: 'Login successful'});
   } catch (error) {
     console.error(error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+// ---------------- ADMIN LOGIN ----------------
+exports.adminLogin = async (req, res) => {
+  try {
+    const { email, password, name } = req.body;
+
+    const admin = await prisma.admin.findUnique({ where: { email } });
+    if (!admin) return res.status(400).json({ error: 'Invalid credentials' });
+
+    const match = await bcrypt.compare(password, admin.password);
+    if (!match) return res.status(400).json({ error: 'Invalid credentials' });
+
+    const token = jwt.sign(
+      { id: admin.id, email: admin.email, role: admin.role },
+      JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    res.cookie('token', token, cookieOptions);
+    return res.status(200).json({ message: 'Admin login successful' });
+  } catch (error) {
+    console.error("Admin Login Error:", error);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -75,3 +100,5 @@ exports.logout = (req, res) => {
     return res.status(500).json({ message: "Internal Server Error. Please try again later." });
   }
 };
+
+
