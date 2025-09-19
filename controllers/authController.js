@@ -2,10 +2,12 @@ const prisma = require('../prismaClient.js');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
-const randomstring=require('randomstring');
 const nodemailer=require('nodemailer');
+const { v4: uuidv4 } = require('uuid');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
+
+
+const JWT_SECRET = process.env.JWT_SECRET ;
 const cookieOptions = {
 	httpOnly: true,
 	maxAge: 1000 * 60 * 60 * 24, // 1 day
@@ -50,6 +52,11 @@ exports.signup = async (req, res) => {
 exports.login = async (req, res) => {
 	try {
 		const { stuID, password } = req.body;
+
+		if (!stuID || !password) {
+			return res.status(400).json({ error: "Student ID and password are required" });
+		}
+
 
 		const student = await prisma.student.findUnique({ where: { stuID } });
 		if (!student) return res.status(400).json({ error: 'Invalid credentials' });
@@ -111,14 +118,15 @@ exports.forgotPassword = async (req,res)=>{
 			return res.json({success: false, message: "This email is not registered. Please check and try again later."});
 		}
 
-		//generate random string
-		const randomString=randomstring.generate();
+		//generate unique token
+		const resetToken = uuidv4();
+
 
 
 		//store token in DB
 		const data = await prisma.student.update({
 			where: { email: email },
-			data: { resetPasswordToken: randomString }
+			data: { resetPasswordToken: resetToken }
 		});
 
 
@@ -139,7 +147,7 @@ exports.forgotPassword = async (req,res)=>{
 			from : process.env.emailUser,
 			to : email,
 			subject : "For reset password",
-			html : `<p> Hii ${existingUser.firstName}, Please copy the link and <a href="${process.env.FRONTEND_URL}?token=${randomString}"> reset your password</a></p>`
+			html : `<p> Hii ${existingUser.firstName}, Please copy the link and <a href="${process.env.FRONTEND_URL}?token=${resetToken}"> reset your password</a></p>`
 		};
 
 		transporter.sendMail(mailOptions, function (error,info){
@@ -170,6 +178,10 @@ exports.resetPassword = async (req,res)=>{
 
 		//then check received token in req.query with the token stored in DB,
 		const token=req.query.token;
+
+		if(!token){
+			return res.status(500).json({success: false, message: "Token is required."});
+		}
 
 		const tokenData=await prisma.student.findUnique({
 			where : {
