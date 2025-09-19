@@ -1,6 +1,7 @@
 const prisma = require('../prismaClient.js');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+
 const randomstring=require('randomstring');
 const nodemailer=require('nodemailer');
 
@@ -10,6 +11,9 @@ const cookieOptions = {
 	maxAge: 1000 * 60 * 60 * 24, // 1 day
 	sameSite: 'lax',
 };
+
+
+
 
 // ---------------- SIGNUP ----------------
 exports.signup = async (req, res) => {
@@ -108,11 +112,48 @@ exports.forgotPassword = async (req,res)=>{
 		}
 
 		//generate random string
+		const randomString=randomstring.generate();
 
-		//send email using nodemailer, usme route with token will be there
 
-		//if any error in sending email then catch that, and dont sotre token in DB
-		//if no error in sending mail, then store token in DB
+		//store token in DB
+		const data = await prisma.student.update({
+			where: { email: email },
+			data: { resetPasswordToken: randomString }
+		});
+
+
+		//send email
+
+		const transporter = nodemailer.createTransport({
+			host:'smtp.gmail.com',
+			port:587,
+			secure:false,
+			requireTLS:true,
+			auth:{
+				user:process.env.emailUser,
+				pass:process.env.emailPassword
+			}
+		});
+
+		const mailOptions = {
+			from : process.env.emailUser,
+			to : email,
+			subject : "For reset password",
+			html : `<p> Hii ${existingUser.firstName}, Please copy the link and <a href="${process.env.FRONTEND_URL}?token=${randomString}"> reset your password</a></p>`
+		};
+
+		transporter.sendMail(mailOptions, function (error,info){
+			if(error){
+				console.error(error);
+				return res.status(200).json({success : false, message : "Some error occured while sending mail. Please try again later"});
+			}
+			else{
+				console.log("Mail has been sent", info.response);
+				return res.status(200).json({success : true, message : "Reset Password link sent on registered email successfully."});
+			}
+		});
+
+
 
 		//also yaha pe automatic logout bhi ho jana chaiye.
 		//fir reset password waale link pe password change hoga, then user can simply login again
@@ -125,13 +166,46 @@ exports.forgotPassword = async (req,res)=>{
 
 exports.resetPassword = async (req,res)=>{
 	try {
-		//get password form req.body, get userid also
+		//get password form req.body
+
 		//then check received token in req.query with the token stored in DB,
+		const token=req.query.token;
+
+		const tokenData=await prisma.student.findUnique({
+			where : {
+				resetPasswordToken : token
+			}
+		});
+
+		if(tokenData){
+			const password=req.body.password;
+
+			const hashedPassword = await bcrypt.hash(password, 10);
+
+			const response = await prisma.student.update({
+				where: { id: tokenData.id }, 
+				data: {
+					password: hashedPassword,
+					resetPasswordToken: null, // clear token after use
+				},
+			});
+
+			//temporary for testing --REMOVE THIS LATER
+			    return res.status(200).json({success: true, message: "Password reset successful. Please login with your new password."});
+
+
+		}else{
+			return res.status(200).json({success: false, message: "This link has been expired."});
+		}
+
+
+
 		//if they are not same then send error
 		//if they are same then change old password to newpassword received and send success message to frontend
 
 
-	} catch (error) {
+	} catch (error) { 
+		console.error(error);
 		return res.status(500).json({success: false, message: "Internal Server Error. Please try again later."});
 	}
 };
