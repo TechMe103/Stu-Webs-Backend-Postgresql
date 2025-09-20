@@ -6,13 +6,20 @@ const nodemailer=require('nodemailer');
 const { v4: uuidv4 } = require('uuid');
 
 
+const {signupSchema, loginSchema} =require("../validators/authValidation.js");
+
+
 
 const JWT_SECRET = process.env.JWT_SECRET ;
+
 const cookieOptions = {
 	httpOnly: true,
 	maxAge: 1000 * 60 * 60 * 24, // 1 day
 	sameSite: 'lax',
 };
+
+
+
 
 
 
@@ -24,7 +31,29 @@ exports.signup = async (req, res) => {
 
 		// Check if Student exists
 		const existing = await prisma.student.findUnique({ where: { stuID } });
-		if (existing) return res.status(400).json({ error: 'Student already exists' });
+		if (existing) return res.status(400).json({success : false, message: 'Student already exists' });
+
+		const existingEmail = await prisma.student.findUnique({ where: { email } });
+		if (existingEmail) return res.status(400).json({success : false, message: 'Email already exists' });
+
+		const existingPRN = await prisma.student.findUnique({ where: { PRN } });
+		if (existingPRN) return res.status(400).json({success : false, message: 'PRN already exists' });
+
+		const {error , value} = signupSchema.validate(req.body, { abortEarly: false });
+
+		if (error) {
+			// Map Joi errors to readable array
+			const validationErrors = error.details.map(err => ({
+				field: err.path[0],
+				message: err.message
+			}));
+
+			return res.status(400).json({
+				success: false,
+				message: "Validation failed",
+				errors: validationErrors
+			});
+		}
 
 		// Hash password
 		const hashedPassword = await bcrypt.hash(password, 10);
@@ -41,7 +70,7 @@ exports.signup = async (req, res) => {
 		res.cookie('token', token, cookieOptions);
 
 		// Send response without token
-		return res.status(201).json({ message: 'Signup successful' });
+		return res.status(201).json({success : true, message: 'Signup successful' });
 	} catch (error) {
 		console.error(error);
 		return res.status(500).json({success: false, message: "Internal Server Error. Please try again later."});
@@ -55,6 +84,22 @@ exports.login = async (req, res) => {
 
 		if (!stuID || !password) {
 			return res.status(400).json({ error: "Student ID and password are required" });
+		}
+
+		const {error , value} = loginSchema.validate(req.body, { abortEarly: false });
+
+		if (error) {
+			// Map Joi errors to readable array
+			const validationErrors = error.details.map(err => ({
+				field: err.path[0],
+				message: err.message
+			}));
+
+			return res.status(400).json({
+				success: false,
+				message: "Validation failed",
+				errors: validationErrors
+			});
 		}
 
 
