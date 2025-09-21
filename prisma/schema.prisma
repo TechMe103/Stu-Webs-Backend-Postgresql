@@ -28,6 +28,8 @@ model Student {
     Admissions          Admission[]
     Achievements        Achievement[]
     SemesterInfos       SemesterInfo[]
+    Internships         Internship[]
+    Placements          Placement[]
 }
 
 // ---------------- ADMIN ----------------
@@ -167,3 +169,68 @@ model SemesterMark {
 }
 
 
+
+
+// ---------------- INTERNSHIP ----------------
+model Internship {
+    id             Int      @id @default(autoincrement())
+    student        Student  @relation(fields: [studentId], references: [id])
+    studentId      Int
+
+    companyName    String
+    role           String
+
+    startDate      DateTime
+    endDate        DateTime
+
+    durationMonths Int
+
+    // Stipend info
+    isPaid         Boolean
+    stipend        Float?
+
+    description    String
+
+    createdAt      DateTime @default(now())
+    updatedAt      DateTime @updatedAt
+}
+
+
+
+// ---------------- PLACEMENT ----------------
+model Placement {
+    id             Int      @id @default(autoincrement())
+    student        Student  @relation(fields: [studentId], references: [id])
+    studentId      Int
+
+    // Placement info
+    isPlacement    Boolean
+    companyName    String?
+    role           String?
+    placementType  PlacementType?
+
+    // Higher Studies info
+    isHigherStudies Boolean
+    examName        ExamName?
+    score           Float?
+
+    // Attachments (offer letters, proofs etc.)
+    attachments     Json?   // flexible: store URLs for PDF/JPEG
+
+    createdAt       DateTime @default(now())
+    updatedAt       DateTime @updatedAt
+}
+
+enum PlacementType {
+    Campus
+    OffCampus
+}
+
+enum ExamName {
+    GATE
+    CAT
+    GRE
+    TOFEL
+    IELTS
+    UPSC
+}
