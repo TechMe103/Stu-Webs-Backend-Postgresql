@@ -26,6 +26,8 @@ model Student {
     // Relations
     personalDetails     PersonalDetails?
     Admissions          Admission[]
+    Achievements        Achievement[]
+    SemesterInfos       SemesterInfo[]
 }
 
 // ---------------- ADMIN ----------------
@@ -86,3 +88,82 @@ model Admission {
     createdAt            DateTime @default(now())
     updatedAt            DateTime @updatedAt
 }
+
+// ---------------- ACHIEVEMENT ----------------
+model Achievement {
+    id               Int      @id @default(autoincrement())
+    student          Student  @relation(fields: [studentId], references: [id])
+    studentId        Int
+
+    category         Category
+    title            String
+    description      String
+    issuedBy         String
+
+    fromDate         DateTime
+    toDate           DateTime
+
+    achievementType  AchievementType
+
+    // Array of team members (Prisma supports Json for flexible lists)
+    teamMembers      Json?
+
+    // Photographs
+    eventPhoto       String
+    certificateURL   String
+
+    createdAt        DateTime @default(now())
+    updatedAt        DateTime @updatedAt
+}
+
+// Enums for strict category & achievement type
+enum Category {
+    CodingCompetitions
+    Committee
+    Hackathons
+    Sports
+    Cultural
+    Technical
+}
+
+enum AchievementType {
+    Participation
+    Winner
+    RunnerUp
+}
+
+
+
+// ---------------- SEMESTER INFO ----------------
+model SemesterInfo {
+    id          Int       @id @default(autoincrement())
+    student     Student   @relation(fields: [studentId], references: [id])
+    studentId   Int
+
+    semester    Int
+    attendance  Float?
+
+    // Array of subject codes with KTs (backlogs) → use Json for flexibility
+    kts         Json?
+
+    // Relation: one semester info → many marks
+    marks       SemesterMark[]
+
+    isDefaulter Boolean   @default(false)
+
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt
+}
+
+// SEMESTER MARKS 
+model SemesterMark {
+    id            Int          @id @default(autoincrement())
+    semesterInfo  SemesterInfo @relation(fields: [semesterInfoId], references: [id])
+    semesterInfoId Int
+
+    subject       String
+    score         Float
+    outOf         Float
+}
+
+
