@@ -30,6 +30,7 @@ model Student {
     SemesterInfos       SemesterInfo[]
     Internships         Internship[]
     Placements          Placement[]
+    activities          Activity[]
 }
 
 // ---------------- ADMIN ----------------
@@ -234,3 +235,30 @@ enum ExamName {
     IELTS
     UPSC
 }
+
+
+// ---------------- ACTIVITY ----------------
+
+model Activity {
+  id             Int      @id @default(autoincrement())
+  stuID          Int
+  student        Student  @relation(fields: [stuID], references: [id])
+
+  type           ActivityType
+  title          String?
+  description    String?
+  date           DateTime?
+  certificateURL String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+
+enum ActivityType {
+  Commitee
+  Sports
+  Hackathon
+}
+
+
